@@ -1,45 +1,41 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 
 import useBreedList from "./useBreedList";
 import Results from "./Results";
+import { useQuery } from "@tanstack/react-query";
+import fetchSearch from "./fetchSearch";
+
 var ANIMALS = ["bird", "cat", "dog", "rabbit", "reptile"];
 
 function SearchParams() {
-  var [location, setLocation] = useState("");
   var [animal, setAnimal] = useState("");
-  var [breed, setBreed] = useState("");
-  var [pets, setPets] = useState([]);
+  var [fetchParams, setFetchParams] = useState({
+    animal,
+    breed: "",
+    location: "",
+  });
   var [breeds] = useBreedList(animal);
+  console.log(breeds);
 
-  useEffect(() => {
-    requestPets();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  var results = useQuery(["search", fetchParams], fetchSearch);
 
-  async function requestPets() {
-    var res = await fetch(
-      `http://pets-v2.dev-apis.com/pets?animal=${animal}&location=${location}&breed=${breed}`
-    );
-    var json = await res.json();
-    setPets(json.pets);
-  }
+  var pets = results?.data?.pets ?? [];
 
   function handleSubmit(e) {
     e.preventDefault();
 
-    requestPets();
-  }
+    var formData = new FormData(e.target);
+    var params = {
+      animal: animal ?? "",
+      breed: formData.get("breed") ?? "",
+      location: formData.get("location") ?? "",
+    };
 
-  function handleInput(e) {
-    setLocation(e.target.value);
+    setFetchParams(params);
   }
 
   function selectAnimal(e) {
     setAnimal(e.target.value);
-    setBreed("");
-  }
-
-  function selectBreed(e) {
-    setBreed(e.target.value);
   }
 
   return (
@@ -50,9 +46,8 @@ function SearchParams() {
           <input
             type="text"
             id="location"
-            value={location}
+            name="location"
             placeholder="Location"
-            onChange={handleInput}
           />
         </label>
         <label htmlFor="animal">
@@ -68,12 +63,7 @@ function SearchParams() {
         </label>
         <label htmlFor="breed">
           Animal
-          <select
-            disabled={breeds.length == 0}
-            id="breed"
-            value={breed}
-            onChange={selectBreed}
-          >
+          <select disabled={breeds.length == 0} id="breed" name="breed">
             <option value="">Select an breed</option>
             {breeds.map((breed) => (
               <option key={breed} value={breed}>
